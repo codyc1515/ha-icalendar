@@ -1,0 +1,11 @@
+# https://www.home-assistant.io/integrations/default_config/
+default_config:
+
+icalendar:
+  secret: myS00perS3c3tStr1ng
+
+# https://www.home-assistant.io/integrations/logger/
+logger:
+  default: info
+  logs:
+    custom_components.icalendar: debug

@@ -1,0 +1,16 @@
+{
+	"domain": "icalendar",
+	"name": "iCalendar API",
+	"after_dependencies": [
+		"calendar",
+		"http"
+	],
+	"codeowners": [
+		"@codyc1515"
+	],
+	"config_flow": false,
+	"documentation": "https://github.com/codyc1515/ha-icalendar",
+	"iot_class": "local_push",
+	"issue_tracker": "https://github.com/codyc1515/ha-icalendar/issues",
+	"version": "1.0.0"
+}
