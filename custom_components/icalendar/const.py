@@ -1,4 +1,5 @@
 """Constants for iCalendar API."""
+
 NAME = "iCalendar API"
 DOMAIN = "icalendar"
 
