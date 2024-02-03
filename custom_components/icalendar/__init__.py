@@ -10,6 +10,10 @@ import datetime
 
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant
+from homeassistant.const import (
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
+)
 from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN, CONTENT_TYPE_ICAL
@@ -65,11 +69,20 @@ class iCalendarView(HomeAssistantView):
             _LOGGER.error("Entity '%s' is not a calendar", entity_id)
             return web.Response(body="403: Forbidden", status=HTTPStatus.FORBIDDEN)
 
-        # Check if the calendar entity exists
+        # Get the calendar entity state
         self._state = self.hass.states.get(entity_id)
+
+        # Check if the calendar entity exists
         if self._state is None:
             _LOGGER.error("Entity '%s' could not be found", entity_id)
             return web.Response(body="404: Not Found", status=HTTPStatus.NOT_FOUND)
+
+        # Check if the calendar entity is available
+        if self._state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+            _LOGGER.error("Entity '%s' could not be found", entity_id)
+            return web.Response(
+                status=HTTPStatus.SERVICE_UNAVAILABLE
+            )
 
         # Generate the variables
         entity_id = escape(entity_id)
