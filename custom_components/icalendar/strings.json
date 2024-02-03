@@ -1,0 +1,17 @@
+{
+	"config": {
+		"abort": {
+			"already_configured": "Entity is already configured"
+		},
+		"error": {
+			"unknown": "Unexpected error"
+		},
+		"step": {
+			"user": {
+				"data": {
+					"entity_id": "Entity Id"
+				}
+			}
+		}
+	}
+}
