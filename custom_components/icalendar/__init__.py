@@ -53,21 +53,19 @@ class iCalendarView(HomeAssistantView):
         # Forbid empty secrets
         if request.query.get("s") is None:
             _LOGGER.error("Request was sent for entity '%s' without secret", entity_id)
-            return web.Response(body="403: Forbidden", status=HTTPStatus.FORBIDDEN)
+            return web.Response(status=HTTPStatus.FORBIDDEN)
 
         # Only return anything with the secret supplied
         if str(request.query.get("s")) != str(self.secret):
             _LOGGER.error(
                 "Request was sent for entity '%s' with invalid secret", entity_id
             )
-            return web.Response(
-                body="401: Unauthorized", status=HTTPStatus.UNAUTHORIZED
-            )
+            return web.Response(status=HTTPStatus.UNAUTHORIZED)
 
         # Only return calendars
         if not entity_id.startswith("calendar."):
             _LOGGER.error("Entity '%s' is not a calendar", entity_id)
-            return web.Response(body="403: Forbidden", status=HTTPStatus.FORBIDDEN)
+            return web.Response(status=HTTPStatus.FORBIDDEN)
 
         # Get the calendar entity state
         self._state = self.hass.states.get(entity_id)
@@ -75,14 +73,12 @@ class iCalendarView(HomeAssistantView):
         # Check if the calendar entity exists
         if self._state is None:
             _LOGGER.error("Entity '%s' could not be found", entity_id)
-            return web.Response(body="404: Not Found", status=HTTPStatus.NOT_FOUND)
+            return web.Response(status=HTTPStatus.NOT_FOUND)
 
         # Check if the calendar entity is available
         if self._state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
             _LOGGER.error("Entity '%s' could not be found", entity_id)
-            return web.Response(
-                status=HTTPStatus.SERVICE_UNAVAILABLE
-            )
+            return web.Response(status=HTTPStatus.SERVICE_UNAVAILABLE)
 
         # Generate the variables
         entity_id = escape(entity_id)
