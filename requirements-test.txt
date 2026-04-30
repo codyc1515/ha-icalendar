@@ -1,0 +1,4 @@
+ical==13.2.2
+aiohttp>=3.11
+voluptuous>=0.15
+pytest>=8
