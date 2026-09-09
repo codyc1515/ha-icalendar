@@ -17,6 +17,16 @@ REQUEST_INTERVAL = 15  # At most four requests/minute across all feeds.
 CACHE_TTL = 90 * 86400
 MISS_TTL = 7 * 86400
 USER_AGENT = "ha-icalendar/2.0 (+https://github.com/codyc1515/ha-icalendar)"
+MATCH_VERSION = 2
+
+
+def same_location(first: tuple[float, float], second: tuple[float, float]) -> bool:
+    """Allow separate address/POI records within 50 metres of each other."""
+    lat1, lat2 = math.radians(first[0]), math.radians(second[0])
+    dlat = lat2 - lat1
+    dlon = math.radians(second[1] - first[1])
+    haversine = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+    return 2 * 6371000 * math.asin(math.sqrt(min(1, haversine))) <= 50
 
 
 def coordinates(value: Any) -> tuple[float, float] | None:
@@ -45,6 +55,12 @@ class LocationResolver:
     async def async_load(self):
         """Restore lookups without contacting the provider."""
         self.cache = await self.store.async_load() or {}
+        # Earlier matching rejected nearby address/POI duplicates. Retry those
+        # negative results after upgrading, while retaining successful lookups.
+        self.cache = {
+            key: item for key, item in self.cache.items()
+            if item.get("coordinates") is not None or item.get("match_version") == MATCH_VERSION
+        }
 
     async def resolve(self, endpoint: str, address: Any) -> tuple[float, float] | None:
         """Resolve at most one new address per interval; never queue feed requests."""
@@ -72,18 +88,22 @@ class LocationResolver:
                     results = await response.json()
                 if not isinstance(results, list):
                     raise ValueError("Invalid geocoding response")
-                # Ambiguous addresses remain plain text rather than getting a wrong pin.
+                # Providers can return both an address and a POI at that address.
+                # Reject geographically distinct matches, not nearby duplicates.
                 point = None
-                if len(results) == 1:
-                    point = coordinates((results[0]["lat"], results[0]["lon"]))
-                    if point is None:
+                if results:
+                    points = [coordinates((result["lat"], result["lon"])) for result in results]
+                    if any(candidate is None for candidate in points):
                         raise ValueError("Invalid geocoding coordinates")
+                    if all(same_location(points[0], candidate) for candidate in points[1:]):
+                        point = points[0]
             except (ClientError, TimeoutError, ValueError, KeyError, TypeError):
                 self.next_request = time.monotonic() + 60
                 return None
             now = time.time()
             self.cache = {key: item for key, item in self.cache.items() if item["expires"] > now}
-            self.cache[key] = {"coordinates": point, "expires": now + (CACHE_TTL if point else MISS_TTL)}
+            self.cache[key] = {"coordinates": point, "expires": now + (CACHE_TTL if point else MISS_TTL),
+                               "match_version": MATCH_VERSION}
             # Bound storage even for feeds with frequently changing addresses.
             while len(self.cache) > 2000:
                 del self.cache[next(iter(self.cache))]

@@ -111,3 +111,30 @@ def test_disabled_or_non_address_locations_do_not_request(resolver, endpoint, ad
     value, session, _, _ = resolver
     assert asyncio.run(value.resolve(endpoint, address)) is None
     session.get.assert_not_called()
+
+
+def test_address_and_nearby_poi_resolve_to_address(resolver):
+    value, _, response, _ = resolver
+    response.json.return_value = [
+        {'lat': '-43.5305198', 'lon': '172.6016101'},
+        {'lat': '-43.5304216', 'lon': '172.6016507'},
+    ]
+    assert asyncio.run(value.resolve('https://geo/search', '199 Clarence Street, Riccarton')) == (-43.5305198, 172.6016101)
+
+
+def test_upgrade_retries_old_negative_results_but_keeps_successes(resolver):
+    value, _, _, _ = resolver
+    positive = {'coordinates': [-43.53, 172.6], 'expires': 9999999999}
+    negative = {'coordinates': None, 'expires': 9999999999}
+    current_negative = {**negative, 'match_version': location.MATCH_VERSION}
+    value.store.async_load.return_value = {
+        'positive': positive, 'old_negative': negative, 'current_negative': current_negative,
+    }
+    asyncio.run(value.async_load())
+    assert value.cache == {'positive': positive, 'current_negative': current_negative}
+
+
+def test_same_location_distance_boundary():
+    assert location.same_location((0, 0), (0, 0.0004))
+    assert not location.same_location((0, 0), (0, 0.0005))
+    assert location.same_location((0, 179.9999), (0, -179.9999))
