@@ -107,9 +107,10 @@ def event_from_ha(event: dict[str, Any]) -> Event | None:
                     str(event.get("uid") or event.get("summary") or ""),
                     start.isoformat()]
         uid = hashlib.sha256(json.dumps(identity).encode("utf-8")).hexdigest()
+        summary = str(event.get("summary") or "")
         result = Event(
             uid=f"{uid}@ha-icalendar",
-            summary=str(event.get("summary") or ""),
+            summary=summary if summary.strip() else "Busy",
             start=start,
             end=end,
             description=event.get("description"),

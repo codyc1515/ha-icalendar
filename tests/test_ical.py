@@ -46,6 +46,19 @@ def test_offset_datetime_round_trips_as_utc():
     assert parsed.dtstart == datetime(2026, 9, 10, tzinfo=timezone.utc)
 
 
+@pytest.mark.parametrize('fields,expected', [
+    ({}, 'Busy'),
+    ({'summary': None}, 'Busy'),
+    ({'summary': ''}, 'Busy'),
+    ({'summary': ' \t '}, 'Busy'),
+    ({'summary': '  Meeting  '}, '  Meeting  '),
+])
+def test_export_summary_falls_back_only_for_blank_titles(fields, expected):
+    value = {'start': '2026-09-10', 'end': '2026-09-11', **fields}
+    output = build_icalendar(SimpleNamespace(), None, 'Calendar', [value])
+    assert IcsCalendarStream.calendar_from_ics(output).events[0].summary == expected
+
+
 @pytest.mark.parametrize('start,end', [
     ('bad', '2026-09-11'), (None, '2026-09-11'),
     ('2026-09-10', '2026-09-09'), ('2026-09-10', '2026-09-10'),
